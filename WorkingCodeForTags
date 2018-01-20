@@ -1,0 +1,94 @@
+# Der COde hier funktioniert und es kommt dauerhaft keine fehlermeldung
+# Leider jetzt ohne Koordinaten, Links und Hashtags, die Felder machen aber Probleme, weil die nicht immer 
+# als String in den SQL geschrieben werden können
+# Bitte nicht mit meinen keys verwenden :) 
+
+
+
+from tweepy import Stream
+from tweepy import OAuthHandler
+from tweepy.streaming import StreamListener
+import pymssql
+import time
+import json
+
+
+
+#        replace mysql.server with "localhost" if you are running via your own server!
+#                        server       MySQL username	MySQL pass  Database name.
+conn = pymssql.connect("localhost","sa","srh1234","SRH_DB")
+
+c = conn.cursor()
+
+
+#consumer key, consumer secret, access token, access secret.
+ckey="SSsEs0e5ILLiIEFMOXPZpkx6y"
+csecret="yUfdqLiGXzN0G93ut1kcyAW0gklSkrkOrUecBh0JygVJjvzfOl"
+atoken="952173585954729984-Vk2hiLbVNhySkZgk3WBZ3Briyrj7MVp"
+asecret="jFfWThVvnbFFCDPUFfXu9QFCTTTsmArcZQwdENdJCpBeg"
+
+class listener(StreamListener):
+
+    def on_data(self, data):
+        all_data = json.loads(data)
+        
+        CreatedAt = all_data["created_at"]
+        TweetIDStr = all_data["id_str"]
+        Tweet = all_data["text"]
+        Source = all_data["source"]
+        Truncated = all_data["truncated"]
+        InReplyToStatusID = all_data["in_reply_to_status_id"]
+        InReplyToUserIDStr = all_data["in_reply_to_user_id_str"]
+        InReplyToUserScreenName = all_data["in_reply_to_screen_name"]
+        UserID = all_data["user"]["id_str"]
+        UserName = all_data["user"]["name"]
+        UserScreenName = all_data["user"]["screen_name"]
+        UserLocation = all_data["user"]["location"]
+        UserUrl = all_data["user"]["url"]
+        # UserDescription = all_data["user"]["description"]
+        UserVerified = all_data["user"]["verified"]
+        UserFollowersCount = all_data["user"]["followers_count"]
+        UserFriendsCount = all_data["user"]["friends_count"]
+        UserListedCount = all_data["user"]["listed_count"]
+        UserFavouritesCount = all_data["user"]["favourites_count"]
+        UserStatusesCount = all_data["user"]["statuses_count"]
+        UserCreatedAt = all_data["user"]["created_at"]
+        UserTimeZone = all_data["user"]["time_zone"]
+        UserGeoEnabled = all_data["user"]["geo_enabled"]
+        UserLang = all_data["user"]["lang"]
+        # Geo = all_data["geo"]
+        # Coordinates = all_data["coordinates"]
+        # Place = all_data["place"]
+        # Contributors = all_data["contributors"]
+        IsQuoteStatus = all_data["is_quote_status"]
+        QuoteCount = all_data["quote_count"]
+        ReplyCount = all_data["reply_count"]
+        RetweetCount = all_data["retweet_count"]
+        FavoriteCount = all_data["favorite_count"]
+        # EntitiesHashtags = all_data["entities"]["hashtags"]
+        
+        c.execute("INSERT INTO T_TwitterTag (Time, CreatedAt, TweetIDStr, Tweet, Source, \
+											Truncated, InReplyToStatusID, InReplyToUserIDStr, InReplyToUserScreenName, UserID, \
+											UserName, UserScreenName, UserLocation, UserUrl, \
+											UserVerified, UserFollowersCount, UserFriendsCount, UserListedCount, UserFavouritesCount, UserStatusesCount, \
+											UserCreatedAt, UserTimeZone, UserGeoEnabled, UserLang, IsQuoteStatus, \
+											QuoteCount, ReplyCount, RetweetCount, FavoriteCount) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            (time.time(), CreatedAt, TweetIDStr, Tweet, Source, Truncated, InReplyToStatusID, InReplyToUserIDStr, InReplyToUserScreenName, UserID, \
+			UserName, UserScreenName, UserLocation, UserUrl, UserVerified, UserFollowersCount, \
+			UserFriendsCount, UserListedCount, UserFavouritesCount, UserStatusesCount,UserCreatedAt, UserTimeZone, \
+			UserGeoEnabled, UserLang, IsQuoteStatus, QuoteCount, ReplyCount, \
+			RetweetCount, FavoriteCount))
+			
+        conn.commit()
+
+        
+        return True
+
+    def on_error(self, status):
+        print (status)
+
+auth = OAuthHandler(ckey, csecret)
+auth.set_access_token(atoken, asecret)
+
+twitterStream = Stream(auth, listener())
+twitterStream.filter(track=["groko","nogroko","neuwahlen","nomoreangela","nomoreangie","jusos","grokosondierungen","spdbp18", "bonn"])
