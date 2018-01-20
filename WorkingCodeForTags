@@ -91,4 +91,4 @@ auth = OAuthHandler(ckey, csecret)
 auth.set_access_token(atoken, asecret)
 
 twitterStream = Stream(auth, listener())
-twitterStream.filter(track=["groko","nogroko","neuwahlen","nomoreangela","nomoreangie","jusos","grokosondierungen","spdbp18", "bonn"])
+twitterStream.filter(track=["groko","nogroko","neuwahlen","nomoreangela","nomoreangie","jusos","grokosondierungen","spdbpt18", "bonn", "spdbpt", "SPD", "CDU", "CSU", "merkel", "schulz"])
