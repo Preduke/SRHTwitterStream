@@ -1,3 +1,9 @@
+############################# Zuerst hier die TXT Dateien Downloaden und in einem Ordner speichern
+############################# Der Pfad zu den TXT Files muss dann unten beim Data-Import angepasst werden.
+
+https://www.dropbox.com/sh/vnkmjc6xap5pndp/AACFC9ApkF1RMpdQBWQXqZl9a?dl=0
+
+
 ############################## Erst einmal alles installieren wenn notwendig
 
 install.packages("cowplot")
