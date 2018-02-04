@@ -1,0 +1,241 @@
+############################## Erst einmal alles installieren wenn notwendig
+
+install.packages("cowplot")
+install.packages("dplyr")
+install.packages("forcats")
+install.packages("ggplot2")
+install.packages("tidytext")
+install.packages("lsa")
+install.packages("tm")
+install.packages("stringr")
+
+
+
+############################### Liste von Stop-Words erstellen
+###### Liste wurde von mir ergänzt um unnötige Wörter aus der Toplisten zu entfernen
+
+library("lsa")
+library("tm")
+library("tidytext")
+library("forcats")
+library("stringr")
+library("cowplot")
+library("dplyr")
+library("ggplot2")
+
+
+
+data(stopwords_de)
+stopwordsLsa <- stopwords_de
+
+stopwordsTm <- stopwords("german")
+
+ownStopwords <- c("abs",
+                  "afd",
+                  "bundestagswahl",
+                  "bundestagswahlprogramm",
+                  "bündnis",
+                  "cdu",
+                  "csu",
+                  "dabei",
+                  "dafür",
+                  "demokraten",
+                  "fdp",
+                  "freie", # Taucht fast ausschließlich im FDP-Programm auf
+                  "gg",
+                  "grün",
+                  "grüne",
+                  "grünen",
+                  "innen",
+                  "insbesondere",
+                  "kapitel",
+                  "künftig",
+                  "liberalen",
+                  "linke",
+                  "regierungsprogramm",
+                  "seither",
+                  "siehe",
+                  "sowie",
+                  "sozialdemokraten",
+                  "sozialdemokratinnen",
+                  "sozialdemokratische",
+                  "sozialdemokratischer",
+                  "spd",
+                  "vgl",
+                  "vi",
+                  "vii",
+                  "viii",
+                  "vn",
+                  "wahlprogramm",
+                  "z.b",
+                  "rt",
+                  "https",
+                  "t.co",
+                  "ankara",
+                  "amp",
+                  "of",
+                  "the",
+                  "de",
+                  "with",
+                  "beim",
+                  "la",
+                  "to",
+                  "mal",
+                  "kurden",
+                  "lässt",
+                  "isis",
+                  "zudem")
+
+wordsNoUse <- data_frame(words = unique(c(stopwordsLsa, stopwordsTm, ownStopwords)))
+
+
+############################### Daten einlesen
+########################## Hier muss der setWD angepasst werden
+########################## Danach noch der Pfad zu den Textdateien anpassen
+########################## Textdateien nicht umbenennen!
+
+
+library("forcats")
+library("stringr")
+library("cowplot")
+library("dplyr")
+library("ggplot2")
+library("tidytext")
+
+#Default Folder festlegen
+setwd("C:/Users/WSDF/Desktop/STUDIUM")
+getwd()
+
+# Daten einlesen und ins Tidy-Text-Format überführen
+data4 <- lapply(c("afd", "CDU", "FDP", "gruenen", "linke", "SPD", "CSU"),
+                function(party) {
+                  
+                  data4 <- readLines(paste0("Termin 4 (Januar)/Twitter Stream/DatenausSQLfuerTextMining/", party, ".txt"))
+                  
+                  data4 <- data4 %>% 
+                    # mehrfache Leerzeichen entfernen
+                    gsub("(?<=[\\s])\\s*|^\\s+|\\s+$", "", ., perl = TRUE) %>% 
+                    # "\n" (Zeilenumbruch) durch Leerzeichen ersetzen
+                    gsub("\n", " ", .) %>%
+                    # getrennte Wörter zusammenführen (frei- heit -> freiheit)
+                    gsub("- ", " ", .) %>% 
+                    # in data.frame überführen
+                    data_frame(text = .) %>% 
+                    # tidy text: ein Wort pro Zeile
+                    unnest_tokens("words", text) %>% 
+                    # stop words entfernen
+                    anti_join(wordsNoUse, by = "words") %>% 
+                    # Wörter mit weniger als zwei Zeichen entfernen
+                    filter(nchar(words, type = "chars") > 1) %>% 
+                    # Parteiname hinzufügen
+                    cbind(party = party, stringsAsFactors = FALSE) %>% 
+                    # Zahlen ausschließen
+                    mutate(words = str_replace_all(words, "[[:digit:]]", "")) %>% 
+                    filter(words != "", words != ".", words != "..")
+                  
+                  return(data4)
+                }) %>% 
+  bind_rows %>% 
+  mutate(party = fct_recode(party, AfD ="afd",
+                            CDU ="CDU", FDP = "FDP", Grüne = "gruenen",
+                            Linke = "linke", SPD = "SPD", CSU = "CSU") %>% 
+           as.character)
+
+
+
+###################### Farben fuer Parteien
+#### Parteinamen und dazugehörige Farben für Plots
+#### CSU ergänzt
+
+# Pakete laden
+library("cowplot")
+library("dplyr")
+library("forcats")
+library("ggplot2")
+library("tidytext")
+
+
+partyColor <- c(AfD = "#2B4894",
+                CDU = "black",
+                CSU = "#777788",
+                FDP = "#DDDD22",
+                Grüne = "#93BB51",
+                Linke = "#8A3B89",
+                SPD = "#cd5364")
+
+
+###################### Häufigte Begriffe ueber alle Parteien
+
+library("ggplot2")
+
+data4 %>% 
+  count(words, sort = TRUE) %>% 
+  head(n = 20) %>% 
+  mutate(words = reorder(words, n)) %>% 
+  ggplot(aes(words, n)) +
+  geom_col() +
+  labs(x = NULL,
+       y = "Anzahl",
+       title = "Häufigste Begriffe (alle Parteien)") +
+  coord_flip()
+
+
+
+###################### Häufigte Begriffe je Partei
+# Hier auf Zoom klicken wenn kein Schaubild angezeigt wird
+
+plot <- lapply(names(partyColor), function(p) {
+  data4 %>%
+    filter(party == p) %>% 
+    count(words, sort = TRUE) %>%
+    head(n = 20) %>% 
+    mutate(words = reorder(words, n)) %>% 
+    ggplot(aes(words, n)) +
+    geom_col(fill = partyColor[p], color = partyColor[p]) + 
+    labs(y = "Anzahl", x = NULL, title = p) +
+    theme(axis.text = element_text(size = 10)) +
+    coord_flip()
+})
+
+plot_grid(plotlist = plot, nrow = 3, ncol = 3, align = "hv")
+
+
+###################### Wichtigsten Begriffe in Tabelle
+
+
+# Häufigkeit der Wörter nach Partei
+wrdCount <- data4 %>% 
+  count(party, words, sort = TRUE) %>% 
+  ungroup
+
+# Wortanzahl nach Partei
+ttlWords <- wrdCount %>% 
+  group_by(party) %>% 
+  summarise(total = sum(n))
+
+wrdCount <- left_join(wrdCount, ttlWords, by = "party")
+
+# Berechnung des tf-idf-Maßes
+wrdCount <- wrdCount %>% 
+  bind_tf_idf(words, party, n)
+
+# Ausgabe
+wrdCount %>% 
+  select(-total) %>% 
+  arrange(desc(tf_idf))
+
+
+###################### 25 wichtigsten Wörter nach Partei
+
+plotwrds <- wrdCount %>%
+  arrange(desc(tf_idf)) %>%
+  mutate(words = factor(words, levels = rev(unique(words))))
+
+plotwrds %>% 
+  top_n(25) %>%
+  ggplot(aes(words, tf_idf, fill = party), color = NA) +
+  geom_col() +
+  labs(x = NULL, y = "tf-idf", fill = "Partei",
+       title = "Wichtigste Begriffe (alle Parteien)") +
+  coord_flip() +
+  scale_fill_manual(breaks = names(partyColor), values = partyColor)
